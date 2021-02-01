@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 
 class cross_section():
     
-    def __init__(self,z0=0,z1=.3,z2=1.5,M200=1e13,Mstar=10**11.5,c=5,Re=3,m=4,ratio=1,
+    def __init__(self,z0=0,z1=.3,z2=1.5,M200=1e13,Mstar=10**11.5,c=5,Re=3,m=4,cratio=1,ratio=1,
                  Om=.25,Or=8.4e-5,Ol=.75,H0=70,galaxy=True,source_mag=25.,show=False):
         
         self.stat = lens_stat1D(z0=z0,z1=z1,z2=z2,M200=M200,Mstar=Mstar*ratio,
-                                c=c,Re=Re,m=m,Om=Om,Or=Or,Ol=Ol,H0=H0,galaxy=galaxy)
+                                c=c*cratio,Re=Re,m=m,Om=Om,Or=Or,Ol=Ol,H0=H0,galaxy=galaxy)
         #get critical curves
         self.z1 = z1
         self.z2 = z2
