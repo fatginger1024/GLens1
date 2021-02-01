@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+*.bin
+*.bz2
+*.ipynb
+output/

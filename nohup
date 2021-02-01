@@ -1,0 +1,8 @@
+WARNING: UnitsWarning: 'erg/cm2/s' contains multiple slashes, which is discouraged by the FITS standard [astropy.units.format.generic]
+rank 8 init...
+Traceback (most recent call last):
+  File "./strongLens_rate_cosmos.py", line 86, in <module>
+    main(size=size,rank=rank)
+  File "./strongLens_rate_cosmos.py", line 53, in main
+    sample_i = np.array_split(np.arange(len(dat['z_cgal'])),size)[rank]
+IndexError: list index out of range
