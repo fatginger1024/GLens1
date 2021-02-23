@@ -10,9 +10,9 @@ from scipy.optimize import bisect
 
 
 class lens_stat_gnfw():
-    def __init__(self,z0=0,z1=.3,z2=1.5,M200=1e13,Mstar=10**11.5,c=5,Re=3,m=4,Om=.25,Or=8.4e-5,Ol=.75,H0=70,ratio=1,alpha=1,source_mag=25.,galaxy=True):
+    def __init__(self,z0=0,z1=.3,z2=1.5,M200=1e13,Mstar=10**11.5,c=5,Re=3,m=4,Om=.25,Or=8.4e-5,Ol=.75,H0=70,ratio=1,cratio=1,alpha=1,source_mag=25.,galaxy=True,get_rho=False):
         self.statt = lens_stat1D(z0=z0,z1=z1,z2=z2,M200=M200,Mstar=Mstar*ratio,
-                                c=c,Re=Re,m=m,Om=Om,Or=Or,Ol=Ol,H0=H0,galaxy=galaxy)
+                                c=c*cratio,Re=Re,m=m,Om=Om,Or=Or,Ol=Ol,H0=H0,galaxy=galaxy)
         self.alpha = alpha # power law index of the gnfw profile
         self.z0 = 0
         self.z1 = z1
@@ -24,10 +24,10 @@ class lens_stat_gnfw():
         self.Ez = np.sqrt(Or*(1+z1)**4+Om*(1+z1)**3+Ol)
         self.Hz = self.H0*self.Ez
         G  = 6.67e-11 # m^3  kg^-1 s^-2
-        self.c = c #concentration parameter
+        self.c = c*cratio #concentration parameter
         self.rhoz = 3*self.Hz**2/(8*pi*G)/1.989e30/(3.24e-23)**3  # M_sun * Mpc^(-3)
         self.rhos = 200/3*self.rhoz*(3-alpha)*c**(alpha)/hyp2f1(3-alpha,3-alpha,4-alpha,-c)
-        self.M200 = M200
+        self.M200 = M200*ratio
         self.r200 = (self.M200/(4/3*pi*200*self.rhoz))**(1/3) #Mpc
         self.rs = self.r200/c #Mpc
         self.galaxy = Sersic(Mstar=Mstar,Re=Re,m=m)
@@ -38,11 +38,19 @@ class lens_stat_gnfw():
         self.Sigmacr = self.d.get_Sigmacr() 
         self.kappas =  self.rhos*self.rs/self.Sigmacr
         self.b = 4*self.rhos*self.rs/self.Sigmacr
-        self.xval_min,self.caus1,self.beta_mag = self.get_xval_min()
+        if get_rho == False:
+            self.xval_min,self.caus1,self.beta_mag = self.get_xval_min()
         
     def rho(self,r):
         alpha = self.alpha
-        return self.rhos/((r/self.rs)**(alpha)+(1+(r/self.rs))**(3-alpha))
+        return self.rhos/((r/self.rs)**(alpha)*(1+(r/self.rs))**(3-alpha))
+    
+    def Sigma(self,r):
+        x = r/self.rs
+        return 2*self.rhos*self.rs*x**(1-self.alpha)*quad_vec(lambda t:np.sin(t)*(np.sin(t)+x)**(self.alpha-3),0,np.pi/2)[0]
+    
+    def M2d(self,r):
+        return 2*np.pi*quad_vec(lambda x:x*self.Sigma(x),0,r)[0]
     
     def F(self,x):
         x = np.atleast_1d(x)
@@ -166,7 +174,7 @@ class lens_stat_gnfw():
     def gamma(self,x):
         r = x*self.rs
         gamma_galaxy = (self.galaxy.M2d(r)/(pi*r**2)-self.galaxy.Sigma(r))/self.Sigmacr*self.apply_galaxy
-        return self.alpha_(x)/(x)-self.kappa(x)+gamma_galaxy
+        return self.b*self.g(x)/x-self.b*self.f(x)/2+gamma_galaxy
     
     def detA(self,x):
         x = np.atleast_1d(x)
@@ -201,11 +209,11 @@ class lens_stat_gnfw():
         #thetas = xval*self.thetas*206265
         #betas = self.beta(xval)*self.thetas*206265
         msk = (xval>xval_min*1.1)*(betas<0)
-        mag = np.abs(1/self.statt.detA(xval[msk]))
+        mag = np.abs(1/self.detA(xval[msk]))
         #mag = np.concatenate(np.abs([1/self.stat.detA(xval[msk][i]) for i in range(len(xval[msk]))]),axis=None)
         app_m = self.get_lensed_mag(mag)
         mg_msk = app_m<tol
-        print(xval[msk][mg_msk].min(),xval[msk][mg_msk].max())
+        #print(xval[msk][mg_msk].min(),xval[msk][mg_msk].max())
         """
         plt.plot(betas[msk][mg_msk],app_m[mg_msk])
         plt.axhline(y=0,ls='--',color='k')

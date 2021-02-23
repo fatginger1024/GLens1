@@ -4,6 +4,7 @@ import numpy as np
 from astropy.table import Table
 
 from get_csection_wmag import cross_section
+from gnfwLens import lens_stat_gnfw
 from get_concentration import concentration
 
 from multiprocessing import Process, Queue, Value, Array
@@ -47,7 +48,7 @@ def get_Re_from_Mstar(Mstar,sigmaR=.147):
     logRe =  np.random.normal(loc=loc,scale=sigmaR,size=1)
     return 10**logRe
 
-def run_one(i,h=.7,ratio=1, cratio=1):
+def run_one(i,h=.7,ratio=1, cratio=1,alpha=1):
     zlens = np.array(dat['z_cgal'])[i]
     Mh_lens = np.array(dat['lmhalo'])[i]
     Mstar_lens = np.array(dat['lmstellar'])[i]
@@ -61,9 +62,10 @@ def run_one(i,h=.7,ratio=1, cratio=1):
             source_rmag = rmag_pool
             scale_rad =  get_Re_from_Mstar(10**Mstar_lens*h,sigmaR=.147)
             conc = concentration(10**Mh_lens,zlens)
-            csection = cross_section(z1=zlens,z2=z2,M200=10**Mh_lens*h,Mstar=10**Mstar_lens*h,
+            csection = lens_stat_gnfw(z1=zlens,z2=z2,M200=10**Mh_lens*h,Mstar=10**Mstar_lens*h,alpha=alpha,
                                      Re=scale_rad,c=conc,cratio=cratio,ratio=ratio,source_mag=source_rmag)
-            beta_caus = csection.get_loc()[1]
+            #beta_caus = csection.get_loc()[1]
+            beta_caus = csection.beta_mag
             cross_sec = pi*beta_caus**2
             P = cross_sec/tot_area * Nct[ind[j]]
             Psum.append(P)
@@ -79,10 +81,10 @@ def qinit(q, index):
 def moving_average(arr, count):
     return np.sum(arr[:])/count
 
-def f(q, count, arr, ratio=1., cratio=1.):
+def f(q, count, arr, ratio=1., cratio=1.,alpha=1.):
     while not q.empty():
         ind = q.get()
-        P = run_one(ind,h=.7,ratio=ratio, cratio=cratio)
+        P = run_one(ind,h=.7,ratio=ratio, cratio=cratio, alpha=alpha)
         arr[ind] = P
         count.value += 1
         num = count.value
@@ -95,13 +97,14 @@ def f(q, count, arr, ratio=1., cratio=1.):
 if __name__ == '__main__':
     parr = [0.4,0.8,1,1.2,1.6,2]
     parc = [0.4,0.8,1,1.2,1.6,2]
-
+    alph = np.arange(.4,3,.4)[::-1]
     num_proc = 4
     np.random.seed(1234)
     num_data = len(dat['z_cgal'])
     index = np.arange(num_data)
     np.random.shuffle(index)
-    # ratio:
+    # alpha:
+    '''
     for ratio in parr:
         process_list = []
         q = Queue(len(index))
@@ -114,6 +117,19 @@ if __name__ == '__main__':
             process_list.append(p)
         for i in process_list:
             p.join()
-        fp = 'output/r{}_cr{}.txt'.format(ratio,1)
+    '''
+    for alpha in alph:
+        process_list = []
+        q = Queue(len(index))
+        num = Value('i', 0)
+        arr = Array('d', np.zeros(num_data))           
+        qinit(q, index)
+        for i in range(num_proc):
+            p = Process(target=f, args=(q,num,arr,1,1.,alpha))
+            p.start()
+            process_list.append(p)
+        for i in process_list:
+            p.join() 
+        fp = 'output/r{}_cr{}_alpha{}.txt'.format(1,1,alpha)
         time.sleep(60)
         np.savetxt(fp,arr[:])
