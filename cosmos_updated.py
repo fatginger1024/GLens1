@@ -86,11 +86,12 @@ def qinit(q, index):
 def moving_average(arr, count):
     return np.sum(arr[:])/count
 
-def f(q, count, arr, ratio=1., cratio=1.,alpha=1.):
+def f(q, count, arr1, arr2, ratio=1., cratio=1.,alpha=1.):
     while not q.empty():
         ind = q.get()
-        P = run_one(ind,h=.7,ratio=ratio, cratio=cratio, alpha=alpha)
-        arr[ind] = P
+        P, M = run_one(ind,h=.7,ratio=ratio, cratio=cratio, alpha=alpha)
+        arr1[ind] = P
+        arr2[ind] = M
         count.value += 1
         num = count.value
         ma = moving_average(arr, num)
@@ -127,14 +128,16 @@ if __name__ == '__main__':
         process_list = []
         q = Queue(len(index))
         num = Value('i', 0)
-        arr = Array('d', np.zeros(num_data))           
+        arr1 = Array('d', np.zeros(num_data))
+        arr2 = Array('d', np.zeros(num_data))
         qinit(q, index)
         for i in range(num_proc):
-            p = Process(target=f, args=(q,num,arr,1,1.,alpha))
+            p = Process(target=f, args=(q,num,arr1,arr2,1,1.,alpha))
             p.start()
             process_list.append(p)
         for i in process_list:
             p.join() 
         fp = 'output_test/r{}_cr{}_alpha{}.txt'.format(1,1,alpha)
         time.sleep(60)
-        np.savetxt(fp,arr[:])
+        np.savetxt(fp,arr1[:])
+        np.savetxt(fp[:-4]+"_Msource.txt",arr2[:])
