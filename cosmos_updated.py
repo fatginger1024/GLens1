@@ -90,8 +90,8 @@ def f(q, count, arr1, arr2, ratio=1., cratio=1.,alpha=1.):
     while not q.empty():
         ind = q.get()
         P, M = run_one(ind,h=.7,ratio=ratio, cratio=cratio, alpha=alpha)
-        arr1[ind] = P
-        arr2[ind] = M
+        arr1[ind*50:(ind+1)*50] = P
+        arr2[ind*50:(ind+1)*50] = M
         count.value += 1
         num = count.value
         ma = moving_average(arr, num)
@@ -128,8 +128,8 @@ if __name__ == '__main__':
         process_list = []
         q = Queue(len(index))
         num = Value('i', 0)
-        arr1 = Array('d', np.zeros(num_data))
-        arr2 = Array('d', np.zeros(num_data))
+        arr1 = Array('d', np.zeros(num_data*50))
+        arr2 = Array('d', np.zeros(num_data*50))
         qinit(q, index)
         for i in range(num_proc):
             p = Process(target=f, args=(q,num,arr1,arr2,1,1.,alpha))
