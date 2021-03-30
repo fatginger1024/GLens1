@@ -15,7 +15,7 @@ import time, os, random
 
 dirbase =  '../GLens'
 
-data = np.fromfile(os.path.join(dirbase,'8560.bin')).reshape(3,-1)
+data = np.fromfile().reshape(3,-1)
 dat = {}
 dat['z_cgal']=data[0,:]
 dat['lmstellar']=data[1,:]
@@ -54,7 +54,9 @@ def run_one(i,h=.7,ratio=1, cratio=1,alpha=1):
     Mh_lens = np.array(dat['lmhalo'])[i]
     Mstar_lens = np.array(dat['lmstellar'])[i]
     ind = np.where(z_bin>zlens+.02)[0]
-    Psum = []
+    #Psum = []
+    Plens = np.zeros(len(Nct))
+    Mag_source = np.zeros(len(Nct))
     for j in range(len(ind)):
         try:
             z2 = z_bin[ind[j]]
@@ -68,11 +70,13 @@ def run_one(i,h=.7,ratio=1, cratio=1,alpha=1):
             #beta_caus = csection.get_loc()[1]
             beta_caus = csection.beta_mag
             cross_sec = pi*beta_caus**2
-            P = cross_sec/tot_area * Nct[ind[j]]
-            Psum.append(P)
+            P = cross_sec/tot_area #* Nct[ind[j]]
+            Plens[ind[j]] = P
+            Mag_source[ind[j]] = source_mag
+            #Psum.append(P)
         except ValueError:
             print(zlens,z2)
-    return np.sum(Psum)
+    return Plens,Mag_source#np.sum(Psum)
 
 
 def qinit(q, index):
@@ -98,7 +102,7 @@ def f(q, count, arr, ratio=1., cratio=1.,alpha=1.):
 if __name__ == '__main__':
     parr = [0.4,0.8,1,1.2,1.6,2]
     parc = [0.4,0.8,1,1.2,1.6,2]
-    alph = np.arange(.4,3,.4)[::-1]
+    alph = np.arange(.4,3,.4)#[::-1]
     num_proc = 4
     np.random.seed(1234)
     num_data = len(dat['z_cgal'])
@@ -131,6 +135,6 @@ if __name__ == '__main__':
             process_list.append(p)
         for i in process_list:
             p.join() 
-        fp = 'output/r{}_cr{}_alpha{}.txt'.format(1,1,alpha)
+        fp = 'output_test/r{}_cr{}_alpha{}.txt'.format(1,1,alpha)
         time.sleep(60)
         np.savetxt(fp,arr[:])
